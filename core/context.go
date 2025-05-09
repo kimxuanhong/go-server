@@ -13,10 +13,14 @@ type Context interface {
 	Bind(obj interface{}) error
 
 	// JSON Output
-	JSON(code int, obj interface{}) error
+	JSON(code int, obj interface{})
 	String(code int, msg string) error
 	Status(code int) Context
 	SetHeader(key, value string)
+
+	Method() string
+	Path() string
+	Next() error
 
 	// Raw access if needed
 	Raw() interface{}

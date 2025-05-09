@@ -30,9 +30,8 @@ func (g *ginContext) Bind(obj interface{}) error {
 	return g.ctx.ShouldBind(obj)
 }
 
-func (g *ginContext) JSON(code int, obj interface{}) error {
+func (g *ginContext) JSON(code int, obj interface{}) {
 	g.ctx.JSON(code, obj)
-	return nil
 }
 
 func (g *ginContext) String(code int, msg string) error {
@@ -47,6 +46,22 @@ func (g *ginContext) Status(code int) core.Context {
 
 func (g *ginContext) SetHeader(key, value string) {
 	g.ctx.Header(key, value)
+}
+
+// Method returns the HTTP method of the request.
+func (g *ginContext) Method() string {
+	return g.ctx.Request.Method
+}
+
+// Path returns the request path.
+func (g *ginContext) Path() string {
+	return g.ctx.FullPath()
+}
+
+// Next calls the next middleware in the chain.
+func (g *ginContext) Next() error {
+	g.ctx.Next()
+	return nil
 }
 
 func (g *ginContext) Raw() interface{} {
