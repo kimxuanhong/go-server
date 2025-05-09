@@ -4,6 +4,7 @@ import (
 	"github.com/kimxuanhong/go-server/core"
 	"github.com/kimxuanhong/go-server/fiber"
 	"log"
+	"net/http"
 )
 
 func main() {
@@ -50,6 +51,22 @@ func main() {
 			"message": "Hello, world!",
 		})
 	})
+
+	funcHandler := []core.RouteConfig{
+		{
+			Path:   "/users/index",
+			Method: http.MethodGet,
+			Handler: func(c core.Context) {
+				c.JSON(200, map[string]string{
+					"message": "Hello, world!",
+				})
+			},
+			Middleware: []core.Handler{func(c core.Context) {
+				log.Println("Test Middle")
+			}},
+		},
+	}
+	server.Routes(funcHandler)
 
 	// Bắt đầu chạy server
 	if err := server.Start(); err != nil {

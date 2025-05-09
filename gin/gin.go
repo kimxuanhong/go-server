@@ -110,13 +110,10 @@ func (s *Server) RegisterRoute(method, path string, handler core.Handler) {
 
 func (s *Server) Routes(routes []core.RouteConfig) {
 	for _, r := range routes {
-		group := s.engine.Group(r.Path)
-		var middlewareInterfaces []gin.HandlerFunc
-		for _, m := range r.Middleware {
-			middlewareInterfaces = append(middlewareInterfaces, transfer(m))
-		}
-		group.Use(middlewareInterfaces...)
-		group.Handle(r.Method, "/", transfer(r.Handler))
+		s.RegisterRoutes(func(rg core.RouterGroup) {
+			rg.Use(r.Middleware...)
+			rg.Register(r.Method, r.Path, r.Handler)
+		})
 	}
 }
 

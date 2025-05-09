@@ -101,19 +101,10 @@ func (s *Server) RegisterRoute(method, path string, handler core.Handler) {
 
 func (s *Server) Routes(routes []core.RouteConfig) {
 	for _, r := range routes {
-		group := s.app.Group(r.Path)
-
-		// Convert []core.Handler -> []fiber.Handler -> []interface{}
-		var middlewareInterfaces []interface{}
-		for _, m := range r.Middleware {
-			middlewareInterfaces = append(middlewareInterfaces, transfer(m))
-		}
-
-		// Đăng ký middleware
-		group.Use(middlewareInterfaces...)
-
-		// Đăng ký route handler
-		group.Add(r.Method, "/", transfer(r.Handler))
+		s.RegisterRoutes(func(rg core.RouterGroup) {
+			rg.Use(r.Middleware...)
+			rg.Register(r.Method, r.Path, r.Handler)
+		})
 	}
 }
 
