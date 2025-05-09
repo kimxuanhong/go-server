@@ -119,8 +119,6 @@ func (g *ginRouterGroup) Use(middleware ...core.Handler) {
 
 func transfer(h core.Handler) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := h(&ginContext{ctx: c}); err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-		}
+		h(&ginContext{ctx: c})
 	}
 }

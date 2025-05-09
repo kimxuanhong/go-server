@@ -117,6 +117,7 @@ func (g *fiberRouterGroup) Use(middleware ...core.Handler) {
 
 func transfer(h core.Handler) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		return h(&fiberContext{ctx: c})
+		h(&fiberContext{ctx: c})
+		return nil
 	}
 }

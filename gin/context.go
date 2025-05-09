@@ -59,9 +59,8 @@ func (g *ginContext) Path() string {
 }
 
 // Next calls the next middleware in the chain.
-func (g *ginContext) Next() error {
+func (g *ginContext) Next() {
 	g.ctx.Next()
-	return nil
 }
 
 func (g *ginContext) Raw() interface{} {

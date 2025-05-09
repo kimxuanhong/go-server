@@ -5,7 +5,7 @@ import (
 )
 
 // Handler defines a generic HTTP handler.
-type Handler func(Context) error
+type Handler func(Context)
 
 type Config interface {
 	GetAddr() string

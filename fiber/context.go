@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/gofiber/fiber/v2"
 	"github.com/kimxuanhong/go-server/core"
+	"log"
 )
 
 type fiberContext struct {
@@ -61,8 +62,10 @@ func (f *fiberContext) Path() string {
 }
 
 // Next calls the next middleware in the chain.
-func (f *fiberContext) Next() error {
-	return f.ctx.Next()
+func (f *fiberContext) Next() {
+	if err := f.ctx.Next(); err != nil {
+		log.Printf("Next() error: %v", err)
+	}
 }
 
 func (f *fiberContext) Raw() interface{} {

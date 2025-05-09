@@ -20,7 +20,7 @@ type Context interface {
 
 	Method() string
 	Path() string
-	Next() error
+	Next()
 
 	// Raw access if needed
 	Raw() interface{}
