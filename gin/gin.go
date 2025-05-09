@@ -58,71 +58,69 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 func (s *Server) RegisterMiddleware(middleware ...core.Handler) {
 	for _, m := range middleware {
-		if h, ok := m.(func(*gin.Context)); ok {
-			s.engine.Use(h)
-		}
+		s.engine.Use(transfer(m))
 	}
 }
 
 func (s *Server) RegisterRoutes(register func(rg core.RouterGroup)) {
-	register(&ginRouterGroup{rg: s.engine.Group("/")})
+	register(&ginRouterGroup{group: s.engine.Group("/")})
 }
 
 func (s *Server) RegisterPrivateRoutes(register func(rg core.RouterGroup), middleware ...core.Handler) {
-	private := s.engine.Group("/private")
+	private := s.engine.Group("/private") // Trả về *gin.RouterGroup
 	for _, m := range middleware {
-		if h, ok := m.(func(*gin.Context)); ok {
-			private.Use(h)
-		}
+		private.Use(transfer(m))
 	}
-	register(&ginRouterGroup{rg: private})
+	register(&ginRouterGroup{group: private})
 }
 
 func (s *Server) RegisterRoute(method, path string, handler core.Handler) {
-	if h, ok := handler.(func(*gin.Context)); ok {
-		switch method {
-		case "GET":
-			s.engine.GET(path, h)
-		case "POST":
-			s.engine.POST(path, h)
-		case "PUT":
-			s.engine.PUT(path, h)
-		case "PATCH":
-			s.engine.PATCH(path, h)
-		case "DELETE":
-			s.engine.DELETE(path, h)
-		default:
-			log.Printf("Unsupported method: %s", method)
-		}
+	switch method {
+	case "GET":
+		s.engine.GET(path, transfer(handler))
+	case "POST":
+		s.engine.POST(path, transfer(handler))
+	case "PUT":
+		s.engine.PUT(path, transfer(handler))
+	case "PATCH":
+		s.engine.PATCH(path, transfer(handler))
+	case "DELETE":
+		s.engine.DELETE(path, transfer(handler))
+	default:
+		log.Printf("Unsupported method: %s", method)
 	}
 }
 
 func (s *Server) Routes(routes []core.RouteConfig) {
 	for _, r := range routes {
 		group := s.engine.Group(r.Path)
+		var middlewareInterfaces []gin.HandlerFunc
 		for _, m := range r.Middleware {
-			if h, ok := m.(func(*gin.Context)); ok {
-				group.Use(h)
-			}
+			middlewareInterfaces = append(middlewareInterfaces, transfer(m))
 		}
-		s.RegisterRoute(r.Method, r.Path, r.Handler)
+		group.Use(middlewareInterfaces...)
+		group.Handle(r.Method, "/", transfer(r.Handler))
 	}
 }
 
 type ginRouterGroup struct {
-	rg *gin.RouterGroup
+	group *gin.RouterGroup
 }
 
 func (g *ginRouterGroup) Register(method, path string, handler core.Handler) {
-	if h, ok := handler.(func(*gin.Context)); ok {
-		g.rg.Handle(method, path, h)
-	}
+	g.group.Handle(method, path, transfer(handler))
 }
 
 func (g *ginRouterGroup) Use(middleware ...core.Handler) {
 	for _, m := range middleware {
-		if h, ok := m.(func(*gin.Context)); ok {
-			g.rg.Use(h)
+		g.group.Use(transfer(m))
+	}
+}
+
+func transfer(h core.Handler) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if err := h(&ginContext{ctx: c}); err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
 		}
 	}
 }

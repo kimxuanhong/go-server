@@ -49,11 +49,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 func (s *Server) RegisterMiddleware(middleware ...core.Handler) {
 	for _, m := range middleware {
-		if h, ok := m.(func(*fiber.Ctx) error); ok {
-			s.app.Use(h)
-		} else {
-			log.Printf("Invalid middleware type for Fiber")
-		}
+		s.app.Use(transfer(m))
 	}
 }
 
@@ -65,58 +61,62 @@ func (s *Server) RegisterRoutes(register func(rg core.RouterGroup)) {
 func (s *Server) RegisterPrivateRoutes(register func(rg core.RouterGroup), middleware ...core.Handler) {
 	private := s.app.Group("/private") // Trả về *fiber.Group
 	for _, m := range middleware {
-		if h, ok := m.(func(*fiber.Ctx) error); ok {
-			private.Use(h)
-		} else {
-			log.Printf("Invalid middleware type for Fiber")
-		}
+		private.Use(transfer(m))
 	}
 	register(&fiberRouterGroup{group: private})
 }
 
 func (s *Server) RegisterRoute(method, path string, handler core.Handler) {
-	if h, ok := handler.(func(*fiber.Ctx) error); ok {
-		s.app.Add(method, path, h)
-	} else {
-		log.Printf("Invalid handler type for Fiber")
+	switch method {
+	case "GET":
+		s.app.Get(path, transfer(handler))
+	case "POST":
+		s.app.Post(path, transfer(handler))
+	case "PUT":
+		s.app.Put(path, transfer(handler))
+	case "PATCH":
+		s.app.Patch(path, transfer(handler))
+	case "DELETE":
+		s.app.Delete(path, transfer(handler))
+	default:
+		log.Printf("Unsupported method: %s", method)
 	}
 }
 
 func (s *Server) Routes(routes []core.RouteConfig) {
 	for _, r := range routes {
 		group := s.app.Group(r.Path)
-		fiberMiddleware := make([]interface{}, 0, len(r.Middleware))
+
+		// Convert []core.Handler -> []fiber.Handler -> []interface{}
+		var middlewareInterfaces []interface{}
 		for _, m := range r.Middleware {
-			if h, ok := m.(func(*fiber.Ctx) error); ok {
-				fiberMiddleware = append(fiberMiddleware, h)
-			} else {
-				log.Printf("Invalid middleware type for Fiber in route %s", r.Path)
-			}
+			middlewareInterfaces = append(middlewareInterfaces, transfer(m))
 		}
-		group.Use(fiberMiddleware...)
-		// Register the route handler
-		s.RegisterRoute(r.Method, r.Path, r.Handler)
+
+		// Đăng ký middleware
+		group.Use(middlewareInterfaces...)
+
+		// Đăng ký route handler
+		group.Add(r.Method, "/", transfer(r.Handler))
 	}
 }
 
 type fiberRouterGroup struct {
-	group fiber.Router // Sửa: dùng *fiber.Group thay vì *fiber.App
+	group fiber.Router
 }
 
 func (g *fiberRouterGroup) Register(method, path string, handler core.Handler) {
-	if h, ok := handler.(func(*fiber.Ctx) error); ok {
-		g.group.Add(method, path, h)
-	} else {
-		log.Printf("Invalid handler type for Fiber")
-	}
+	g.group.Add(method, path, transfer(handler))
 }
 
 func (g *fiberRouterGroup) Use(middleware ...core.Handler) {
 	for _, m := range middleware {
-		if h, ok := m.(func(*fiber.Ctx) error); ok {
-			g.group.Use(h)
-		} else {
-			log.Printf("Invalid middleware type for Fiber")
-		}
+		g.group.Use(transfer(m))
+	}
+}
+
+func transfer(h core.Handler) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		return h(&fiberContext{ctx: c})
 	}
 }

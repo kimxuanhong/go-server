@@ -5,7 +5,11 @@ import (
 )
 
 // Handler defines a generic HTTP handler.
-type Handler interface{}
+type Handler func(Context) error
+
+type Config interface {
+	GetAddr() string
+}
 
 // RouterGroup defines a generic route group.
 type RouterGroup interface {
