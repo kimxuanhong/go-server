@@ -5,12 +5,28 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kimxuanhong/go-server/core"
 	"log"
+	"os"
 )
 
 // Config defines server configuration.
 type Config struct {
-	Host string
-	Port string
+	Host string `yaml:"host"`
+	Port string `yaml:"port"`
+}
+
+func NewConfig() *Config {
+	return &Config{
+		Host: getEnv("SERVER_HOST", "localhost"),
+		Port: getEnv("SERVER_PORT", "8080"),
+	}
+}
+
+func getEnv(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
 }
 
 func (c *Config) GetAddr() string {
