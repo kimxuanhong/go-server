@@ -4,6 +4,7 @@ import (
 	"github.com/kimxuanhong/go-server/core"
 	"github.com/kimxuanhong/go-server/gin"
 	"log"
+	"net/http"
 )
 
 func main() {
@@ -17,40 +18,52 @@ func main() {
 	server := gin.NewServer(cfg)
 
 	// Đăng ký middleware toàn cục
-	server.RegisterMiddleware(func(c core.Context) {
+	server.Use(func(c core.Context) {
 		log.Printf("Middleware: %s %s", c.Method(), c.Path())
 		c.Next()
 	})
 
 	// Đăng ký các routes
-	server.RegisterRoutes(func(rg core.RouterGroup) {
+	server.AddGroup("/index", func(rg core.RouterGroup) {
 		// Đăng ký một route đơn giản
-		rg.Register("GET", "/hello", func(c core.Context) {
+		rg.Add("GET", "/hello", func(c core.Context) {
 			c.JSON(200, map[string]string{
 				"message": "Hello, world!",
 			})
-		})
-	})
-
-	// Đăng ký các routes riêng tư
-	server.RegisterPrivateRoutes(func(rg core.RouterGroup) {
-		// Đăng ký một route cho nhóm private
-		rg.Register("GET", "/private", func(c core.Context) {
-			c.JSON(200, map[string]string{
-				"message": "Private route accessed",
-			})
+		}, func(c core.Context) {
+			log.Println("Test /hello")
+			c.Next()
 		})
 	}, func(c core.Context) {
-		// Middleware cho private routes
-		log.Println("Private route accessed")
+		log.Println("Test /index")
 		c.Next()
 	})
 
-	server.RegisterRoute("GET", "/ping", func(c core.Context) {
+	server.Add("GET", "/ping", func(c core.Context) {
 		c.JSON(200, map[string]string{
-			"message": "Hello, world!",
+			"message": "pong",
 		})
+	}, func(c core.Context) {
+		log.Println("Test /ping")
+		c.Next()
 	})
+
+	funcHandler := []core.RouteConfig{
+		{
+			Path:   "/users/index",
+			Method: http.MethodGet,
+			Handler: func(c core.Context) {
+				c.JSON(200, map[string]string{
+					"message": "/users/index",
+				})
+			},
+			Middleware: []core.Handler{func(c core.Context) {
+				log.Println("Test /users/index")
+				c.Next()
+			}},
+		},
+	}
+	server.Routes(funcHandler)
 
 	// Bắt đầu chạy server
 	if err := server.Start(); err != nil {

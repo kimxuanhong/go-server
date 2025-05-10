@@ -63,48 +63,30 @@ func (s *Server) Shutdown(ctx context.Context) error {
 	return s.app.Shutdown()
 }
 
-func (s *Server) RegisterMiddleware(middleware ...core.Handler) {
+func (s *Server) Use(middleware ...core.Handler) {
 	for _, m := range middleware {
 		s.app.Use(transfer(m))
 	}
 }
 
-func (s *Server) RegisterRoutes(register func(rg core.RouterGroup)) {
-	group := s.app.Group("/") // Trả về *fiber.Group
+func (s *Server) AddGroup(relativePath string, register func(rg core.RouterGroup), middleware ...core.Handler) {
+	group := s.app.Group(relativePath)
+	for _, m := range middleware {
+		group.Use(transfer(m))
+	}
 	register(&fiberRouterGroup{group: group})
 }
 
-func (s *Server) RegisterPrivateRoutes(register func(rg core.RouterGroup), middleware ...core.Handler) {
-	private := s.app.Group("/private") // Trả về *fiber.Group
+func (s *Server) Add(method, path string, handler core.Handler, middleware ...core.Handler) {
 	for _, m := range middleware {
-		private.Use(transfer(m))
+		s.app.Use(path, transfer(m))
 	}
-	register(&fiberRouterGroup{group: private})
-}
-
-func (s *Server) RegisterRoute(method, path string, handler core.Handler) {
-	switch method {
-	case "GET":
-		s.app.Get(path, transfer(handler))
-	case "POST":
-		s.app.Post(path, transfer(handler))
-	case "PUT":
-		s.app.Put(path, transfer(handler))
-	case "PATCH":
-		s.app.Patch(path, transfer(handler))
-	case "DELETE":
-		s.app.Delete(path, transfer(handler))
-	default:
-		log.Printf("Unsupported method: %s", method)
-	}
+	s.app.Add(method, path, transfer(handler))
 }
 
 func (s *Server) Routes(routes []core.RouteConfig) {
 	for _, r := range routes {
-		s.RegisterRoutes(func(rg core.RouterGroup) {
-			rg.Use(r.Middleware...)
-			rg.Register(r.Method, r.Path, r.Handler)
-		})
+		s.Add(r.Method, r.Path, r.Handler, r.Middleware...)
 	}
 }
 
@@ -112,14 +94,11 @@ type fiberRouterGroup struct {
 	group fiber.Router
 }
 
-func (g *fiberRouterGroup) Register(method, path string, handler core.Handler) {
-	g.group.Add(method, path, transfer(handler))
-}
-
-func (g *fiberRouterGroup) Use(middleware ...core.Handler) {
+func (g *fiberRouterGroup) Add(method, path string, handler core.Handler, middleware ...core.Handler) {
 	for _, m := range middleware {
-		g.group.Use(transfer(m))
+		g.group.Use(path, transfer(m))
 	}
+	g.group.Add(method, path, transfer(handler))
 }
 
 func transfer(h core.Handler) fiber.Handler {

@@ -13,8 +13,7 @@ type Config interface {
 
 // RouterGroup defines a generic route group.
 type RouterGroup interface {
-	Register(method, path string, handler Handler)
-	Use(middleware ...Handler)
+	Add(method, path string, handler Handler, middleware ...Handler)
 }
 
 // RouteConfig defines a route configuration.
@@ -29,9 +28,8 @@ type RouteConfig struct {
 type Server interface {
 	Start() error
 	Shutdown(ctx context.Context) error
-	RegisterMiddleware(middleware ...Handler)
-	RegisterRoutes(register func(rg RouterGroup))
-	RegisterPrivateRoutes(register func(rg RouterGroup), middleware ...Handler)
-	RegisterRoute(method, path string, handler Handler)
+	Use(middleware ...Handler)
+	AddGroup(relativePath string, register func(rg RouterGroup), middleware ...Handler)
+	Add(method, path string, handler Handler, middleware ...Handler)
 	Routes(routes []RouteConfig)
 }
