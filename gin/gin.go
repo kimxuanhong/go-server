@@ -84,7 +84,7 @@ func (s *Server) AddGroup(relativePath string, register func(rg core.RouterGroup
 	for _, m := range middleware {
 		group.Use(transfer(m))
 	}
-	register(&ginRouterGroup{group: group})
+	register(&RouterGroup{group: group})
 }
 
 func (s *Server) Add(method, path string, handler core.Handler, middleware ...core.Handler) {
@@ -102,11 +102,11 @@ func (s *Server) Routes(routes []core.RouteConfig) {
 	}
 }
 
-type ginRouterGroup struct {
+type RouterGroup struct {
 	group *gin.RouterGroup
 }
 
-func (g *ginRouterGroup) Add(method, path string, handler core.Handler, middleware ...core.Handler) {
+func (g *RouterGroup) Add(method, path string, handler core.Handler, middleware ...core.Handler) {
 	for _, m := range middleware {
 		g.group.Use(transfer(m))
 	}
