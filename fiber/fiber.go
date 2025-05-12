@@ -35,6 +35,7 @@ func (c *Config) GetAddr() string {
 
 // Server implements core.Server for Fiber.
 type Server struct {
+	*core.DynamicRouter
 	app    *fiber.App
 	config *Config
 }
@@ -47,13 +48,18 @@ func NewServer(cfg *Config) core.Server {
 	})
 
 	return &Server{
-		app:    app,
-		config: cfg,
+		DynamicRouter: &core.DynamicRouter{},
+		app:           app,
+		config:        cfg,
 	}
 }
 
 func (s *Server) Start() error {
 	addr := s.config.GetAddr()
+	//add api from @route tag
+	for _, m := range s.DynamicRouter.Routes {
+		s.Add(m.Method, m.Path, m.Handler)
+	}
 	log.Printf("Server is running at %s", addr)
 	return s.app.Listen(addr)
 }

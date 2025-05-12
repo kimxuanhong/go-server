@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/kimxuanhong/go-server/core"
+	"github.com/kimxuanhong/go-server/example/api"
 	"github.com/kimxuanhong/go-server/gin"
 	"log"
 	"net/http"
@@ -64,6 +65,9 @@ func main() {
 		},
 	}
 	server.Routes(funcHandler)
+
+	server.SetHandlers(&api.MyApiHandler{})
+	server.RoutersPath("example/api")
 
 	// Bắt đầu chạy server
 	if err := server.Start(); err != nil {

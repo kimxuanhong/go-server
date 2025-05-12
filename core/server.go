@@ -31,5 +31,7 @@ type Server interface {
 	Use(middleware ...Handler)
 	AddGroup(relativePath string, register func(rg RouterGroup), middleware ...Handler)
 	Add(method, path string, handler Handler, middleware ...Handler)
+	SetHandlers(...interface{})
+	RoutersPath(path ...string)
 	Routes(routes []RouteConfig)
 }
