@@ -5,12 +5,14 @@ import (
 	"go/parser"
 	"go/token"
 	"log"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 )
 
 type DynamicRouter struct {
+	dirs        []string
 	apiHandlers []interface{}
 	Routes      []RouteConfig
 }
@@ -28,17 +30,35 @@ func (b *DynamicRouter) SetHandlers(handlers ...interface{}) {
 }
 
 func (b *DynamicRouter) RoutersPath(dirs ...string) {
+	b.dirs = append(b.dirs, dirs...)
+}
+
+// LoadRouter quét tất cả các thư mục và tìm kiếm các route từ các tệp Go
+func (b *DynamicRouter) LoadRouter() {
 	if len(b.apiHandlers) == 0 {
 		log.Println("no registered handlers found; did you forget SetHandlers()?")
 		return
 	}
 
 	ctxType := reflect.TypeOf((*Context)(nil)).Elem()
-	for _, dir := range dirs {
+
+	// Nếu không có đường dẫn nào được truyền vào, quét thư mục hiện tại của main
+	if len(b.dirs) == 0 {
+		dir, err := os.Getwd() // Lấy thư mục hiện tại của main
+		if err != nil {
+			log.Fatalf("failed to get current working directory: %v", err)
+		}
+		b.dirs = append(b.dirs, dir) // Quét từ thư mục hiện tại
+	}
+
+	// Hàm quét đệ quy
+	var scanDirs func(string) error
+	scanDirs = func(dir string) error {
+		// Quét tất cả các tệp Go trong thư mục hiện tại
 		files, err := filepath.Glob(filepath.Join(dir, "*.go"))
 		if err != nil {
 			log.Printf("failed to scan folder %s: %v", dir, err)
-			continue
+			return err
 		}
 
 		for _, file := range files {
@@ -61,9 +81,11 @@ func (b *DynamicRouter) RoutersPath(dirs ...string) {
 						log.Printf("method %s in %T must be func(Context)", route.Handler, handler)
 						continue
 					}
+
 					// Tạo handler thực thi
 					h := Handler(func(ctx Context) {
 						results := method.Call([]reflect.Value{reflect.ValueOf(ctx)})
+
 						if len(results) > 0 && !results[0].IsNil() {
 							if err, ok := results[0].Interface().(error); ok {
 								log.Printf("handler %s returned error: %v", route.Handler, err)
@@ -80,6 +102,30 @@ func (b *DynamicRouter) RoutersPath(dirs ...string) {
 					log.Printf("handler method %s not found for path %s", route.Handler, route.Path)
 				}
 			}
+		}
+
+		// Duyệt đệ quy vào các thư mục con
+		subDirs, err := os.ReadDir(dir)
+		if err != nil {
+			log.Printf("failed to read directory %s: %v", dir, err)
+			return err
+		}
+		for _, entry := range subDirs {
+			if entry.IsDir() {
+				err := scanDirs(filepath.Join(dir, entry.Name()))
+				if err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+
+	// Quét tất cả các thư mục đã chỉ định (hoặc thư mục gốc nếu không có thư mục nào được truyền vào)
+	for _, dir := range b.dirs {
+		err := scanDirs(dir)
+		if err != nil {
+			log.Printf("error scanning directory %s: %v", dir, err)
 		}
 	}
 }
