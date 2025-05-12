@@ -65,7 +65,7 @@ func (s *Server) Start() error {
 		Addr:    addr,
 		Handler: s.engine,
 	}
-	//add api from @route tag
+	//add api from @Api tag
 	s.LoadRouter()
 	for _, m := range s.DynamicRouter.Routes {
 		s.Add(m.Method, m.Path, m.Handler)

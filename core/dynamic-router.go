@@ -36,7 +36,6 @@ func (b *DynamicRouter) RoutersPath(dirs ...string) {
 // LoadRouter quét tất cả các thư mục và tìm kiếm các route từ các tệp Go
 func (b *DynamicRouter) LoadRouter() {
 	if len(b.apiHandlers) == 0 {
-		log.Println("no registered handlers found; did you forget SetHandlers()?")
 		return
 	}
 
@@ -150,14 +149,14 @@ func ParseRoutesFromFile(filename string) []ParseRoute {
 			continue
 		}
 		for _, comment := range fn.Doc.List {
-			if strings.HasPrefix(comment.Text, "// @route") {
+			if strings.HasPrefix(comment.Text, "// @Api") {
 				// Tách comment thành các phần tử
 				parts := strings.Fields(comment.Text)
 				if len(parts) != 4 {
-					log.Printf("Invalid @route comment format: %s", comment.Text)
+					log.Printf("Invalid @Api comment format: %s", comment.Text)
 					continue
 				}
-				// Phần tử đầu tiên là @route, phần tử thứ 2 là method, phần tử thứ 3 là path
+				// Phần tử đầu tiên là @Api, phần tử thứ 2 là method, phần tử thứ 3 là path
 				method := parts[2]
 				path := parts[3]
 

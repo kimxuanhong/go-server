@@ -58,7 +58,7 @@ func NewServer(cfg *Config) core.Server {
 
 func (s *Server) Start() error {
 	addr := s.config.GetAddr()
-	//add api from @route tag
+	//add api from @Api tag
 	s.LoadRouter()
 	for _, m := range s.DynamicRouter.Routes {
 		s.Add(m.Method, m.Path, m.Handler)

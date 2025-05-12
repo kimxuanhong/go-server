@@ -8,7 +8,7 @@ type MyApiHandler struct {
 }
 
 // SayHi API
-// @route GET /say-hi
+// @Api GET /say-hi
 func (h *MyApiHandler) SayHi(c core.Context) {
 	c.JSON(200, map[string]string{
 		"message": "SayHi Api",
@@ -16,7 +16,7 @@ func (h *MyApiHandler) SayHi(c core.Context) {
 }
 
 // Print555 API
-// @route GET /print/555
+// @Api GET /print/555
 func (h *MyApiHandler) Print555(c core.Context) {
 	c.JSON(200, map[string]string{
 		"message": "Print555 Api",
