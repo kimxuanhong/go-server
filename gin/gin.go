@@ -39,6 +39,7 @@ func (c *Config) GetAddr() string {
 // Server implements core.Server for Gin.
 type Server struct {
 	*core.DynamicRouter
+	*core.ProviderRouter
 	engine     *gin.Engine
 	config     *Config
 	httpServer *http.Server
@@ -51,9 +52,10 @@ func NewServer(cfg *Config) core.Server {
 	engine.Use(gin.Recovery())
 
 	return &Server{
-		DynamicRouter: &core.DynamicRouter{},
-		engine:        engine,
-		config:        cfg,
+		DynamicRouter:  &core.DynamicRouter{},
+		ProviderRouter: &core.ProviderRouter{},
+		engine:         engine,
+		config:         cfg,
 	}
 }
 
@@ -67,6 +69,9 @@ func (s *Server) Start() error {
 	for _, m := range s.DynamicRouter.Routes {
 		s.Add(m.Method, m.Path, m.Handler)
 	}
+	//add api from provider route
+	s.Routes(s.ProviderRouter.Routes)
+
 	log.Printf("Server is running at %s", addr)
 	return s.httpServer.ListenAndServe()
 }

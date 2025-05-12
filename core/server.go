@@ -33,5 +33,6 @@ type Server interface {
 	Add(method, path string, handler Handler, middleware ...Handler)
 	SetHandlers(...interface{})
 	RoutersPath(path ...string)
+	RegisterHandlers(handlers ...interface{})
 	Routes(routes []RouteConfig)
 }

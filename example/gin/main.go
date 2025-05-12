@@ -67,7 +67,8 @@ func main() {
 	server.Routes(funcHandler)
 
 	server.SetHandlers(&api.MyApiHandler{})
-	server.RoutersPath("example/api")
+	server.RoutersPath("example/*")
+	server.RegisterHandlers(&api.MyApiHandler{})
 
 	// Bắt đầu chạy server
 	if err := server.Start(); err != nil {
