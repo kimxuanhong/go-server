@@ -70,6 +70,7 @@ func main() {
 		},
 	}
 	server.Routes(funcHandler)
+	server.HealthCheck()
 
 	// Bắt đầu chạy server
 	if err := server.Start(); err != nil {

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"path"
+	"time"
 )
 
 // Server implements core.Server for Gin.
@@ -95,6 +96,25 @@ func (s *Server) RootPath(relativePath string) {
 	if relativePath != "" {
 		s.config.RootPath = relativePath
 	}
+}
+
+func (s *Server) HealthCheck() {
+	s.engine.GET("/liveness", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "alive"})
+	})
+
+	s.engine.GET("/readiness", func(c *gin.Context) {
+		// Bạn có thể kiểm tra kết nối DB, Redis, etc. tại đây
+		c.JSON(200, gin.H{"status": "ready"})
+	})
+
+	s.engine.POST("/terminate", func(c *gin.Context) {
+		go func() {
+			time.Sleep(1 * time.Second)
+			_ = s.Shutdown(context.Background())
+		}()
+		c.JSON(200, gin.H{"status": "terminating"})
+	})
 }
 
 type RouterGroup struct {

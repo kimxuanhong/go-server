@@ -33,4 +33,5 @@ type Server interface {
 	Routes(routes []RouteConfig)
 	Static(relativePath, root string)
 	RootPath(relativePath string)
+	HealthCheck()
 }

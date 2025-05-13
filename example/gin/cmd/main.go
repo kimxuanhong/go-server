@@ -68,6 +68,7 @@ func main() {
 	server.Routes(funcHandler)
 
 	server.SetHandlers(&api.MyApiHandler{})
+	server.HealthCheck()
 
 	// Bắt đầu chạy server
 	if err := server.Start(); err != nil {

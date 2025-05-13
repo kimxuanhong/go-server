@@ -6,6 +6,7 @@ import (
 	"github.com/kimxuanhong/go-server/core"
 	"log"
 	"path"
+	"time"
 )
 
 // Server implements core.Server for Fiber.
@@ -85,6 +86,31 @@ func (s *Server) RootPath(relativePath string) {
 	if relativePath != "" {
 		s.config.RootPath = relativePath
 	}
+}
+
+func (s *Server) HealthCheck() {
+	s.app.Get("/liveness", func(c *fiber.Ctx) error {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status": "alive",
+		})
+	})
+
+	s.app.Get("/readiness", func(c *fiber.Ctx) error {
+		// Thêm logic kiểm tra database, cache, v.v. nếu cần
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status": "ready",
+		})
+	})
+
+	s.app.Post("/terminate", func(c *fiber.Ctx) error {
+		go func() {
+			time.Sleep(1 * time.Second)
+			_ = s.Shutdown(context.Background())
+		}()
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"status": "terminating",
+		})
+	})
 }
 
 type RouterGroup struct {
