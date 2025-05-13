@@ -90,14 +90,14 @@ func (s *Server) RootPath(relativePath string) {
 
 func (s *Server) HealthCheck() {
 	s.app.Get("/liveness", func(c *fiber.Ctx) error {
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		return c.Status(core.StatusOK).JSON(fiber.Map{
 			"status": "alive",
 		})
 	})
 
 	s.app.Get("/readiness", func(c *fiber.Ctx) error {
 		// Thêm logic kiểm tra database, cache, v.v. nếu cần
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		return c.Status(core.StatusOK).JSON(fiber.Map{
 			"status": "ready",
 		})
 	})
@@ -107,7 +107,7 @@ func (s *Server) HealthCheck() {
 			time.Sleep(1 * time.Second)
 			_ = s.Shutdown(context.Background())
 		}()
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		return c.Status(core.StatusOK).JSON(fiber.Map{
 			"status": "terminating",
 		})
 	})
