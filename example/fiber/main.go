@@ -9,9 +9,10 @@ import (
 
 func main() {
 	// Tạo cấu hình cho server
-	cfg := &fiber.Config{
-		Host: "localhost",
-		Port: "8080",
+	cfg := &core.Config{
+		Host:     "localhost",
+		Port:     "8081",
+		RootPath: "/api/v1/",
 	}
 	// Khởi tạo server với cấu hình
 	server := fiber.NewServer(cfg)

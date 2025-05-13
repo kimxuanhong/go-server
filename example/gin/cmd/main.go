@@ -10,10 +10,11 @@ import (
 
 func main() {
 	// Tạo cấu hình cho server
-	cfg := &gin.Config{
-		Host: "localhost",
-		Port: "8081",
-		Mode: "debug",
+	cfg := &core.Config{
+		Host:     "localhost",
+		Port:     "8081",
+		Mode:     "debug",
+		RootPath: "/api/v1/",
 	}
 	// Khởi tạo server với cấu hình
 	server := gin.NewServer(cfg)

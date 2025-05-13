@@ -7,10 +7,6 @@ import (
 // Handler defines a generic HTTP handler.
 type Handler func(Context)
 
-type Config interface {
-	GetAddr() string
-}
-
 // RouterGroup defines a generic route group.
 type RouterGroup interface {
 	Add(method, path string, handler Handler, middleware ...Handler)
@@ -30,9 +26,11 @@ type Server interface {
 	Shutdown(ctx context.Context) error
 	Use(middleware ...Handler)
 	AddGroup(relativePath string, register func(rg RouterGroup), middleware ...Handler)
-	Add(method, path string, handler Handler, middleware ...Handler)
+	Add(method, relativePath string, handler Handler, middleware ...Handler)
 	SetHandlers(...interface{})
 	RoutersPath(path ...string)
 	RegisterHandlers(handlers ...interface{})
 	Routes(routes []RouteConfig)
+	Static(relativePath, root string)
+	RootPath(relativePath string)
 }

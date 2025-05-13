@@ -5,43 +5,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kimxuanhong/go-server/core"
 	"log"
-	"os"
+	"path"
 )
-
-// Config defines server configuration.
-type Config struct {
-	Host string `yaml:"host"`
-	Port string `yaml:"port"`
-}
-
-func NewConfig() *Config {
-	return &Config{
-		Host: getEnv("SERVER_HOST", "localhost"),
-		Port: getEnv("SERVER_PORT", "8080"),
-	}
-}
-
-func getEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return value
-}
-
-func (c *Config) GetAddr() string {
-	return c.Host + ":" + c.Port
-}
 
 // Server implements core.Server for Fiber.
 type Server struct {
 	*core.DynamicRouter
 	*core.ProviderRouter
 	app    *fiber.App
-	config *Config
+	config *core.Config
 }
 
-func NewServer(cfg *Config) core.Server {
+func NewServer(cfg *core.Config) core.Server {
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
 		log.Printf("Request: %s %s", c.Method(), c.Path())
@@ -58,11 +33,11 @@ func NewServer(cfg *Config) core.Server {
 
 func (s *Server) Start() error {
 	addr := s.config.GetAddr()
+
 	//add api from @Api tag
 	s.LoadRouter()
-	for _, m := range s.DynamicRouter.Routes {
-		s.Add(m.Method, m.Path, m.Handler)
-	}
+	s.Routes(s.DynamicRouter.Routes)
+
 	//add api from provider route
 	s.Routes(s.ProviderRouter.Routes)
 
@@ -82,23 +57,33 @@ func (s *Server) Use(middleware ...core.Handler) {
 }
 
 func (s *Server) AddGroup(relativePath string, register func(rg core.RouterGroup), middleware ...core.Handler) {
-	group := s.app.Group(relativePath)
+	group := s.app.Group(path.Join(s.config.RootPath, relativePath))
 	for _, m := range middleware {
 		group.Use(transfer(m))
 	}
 	register(&RouterGroup{group: group})
 }
 
-func (s *Server) Add(method, path string, handler core.Handler, middleware ...core.Handler) {
+func (s *Server) Add(method, relativePath string, handler core.Handler, middleware ...core.Handler) {
 	for _, m := range middleware {
-		s.app.Use(path, transfer(m))
+		s.app.Use(path.Join(s.config.RootPath, relativePath), transfer(m))
 	}
-	s.app.Add(method, path, transfer(handler))
+	s.app.Add(method, path.Join(s.config.RootPath, relativePath), transfer(handler))
 }
 
 func (s *Server) Routes(routes []core.RouteConfig) {
 	for _, r := range routes {
 		s.Add(r.Method, r.Path, r.Handler, r.Middleware...)
+	}
+}
+
+func (s *Server) Static(relativePath, root string) {
+	s.app.Static(relativePath, root)
+}
+
+func (s *Server) RootPath(relativePath string) {
+	if relativePath != "" {
+		s.config.RootPath = relativePath
 	}
 }
 

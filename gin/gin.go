@@ -6,46 +6,19 @@ import (
 	"github.com/kimxuanhong/go-server/core"
 	"log"
 	"net/http"
-	"os"
+	"path"
 )
-
-// Config defines server configuration.
-type Config struct {
-	Host string `yaml:"host"`
-	Port string `yaml:"port"`
-	Mode string `yaml:"mode"`
-}
-
-func NewConfig() *Config {
-	return &Config{
-		Host: getEnv("SERVER_HOST", "localhost"),
-		Port: getEnv("SERVER_PORT", "8080"),
-		Mode: getEnv("GIN_MODE", "debug"),
-	}
-}
-
-func getEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return value
-}
-
-func (c *Config) GetAddr() string {
-	return c.Host + ":" + c.Port
-}
 
 // Server implements core.Server for Gin.
 type Server struct {
 	*core.DynamicRouter
 	*core.ProviderRouter
 	engine     *gin.Engine
-	config     *Config
+	config     *core.Config
 	httpServer *http.Server
 }
 
-func NewServer(cfg *Config) core.Server {
+func NewServer(cfg *core.Config) core.Server {
 	gin.SetMode(cfg.Mode)
 	engine := gin.New()
 	engine.Use(gin.Logger())
@@ -65,11 +38,11 @@ func (s *Server) Start() error {
 		Addr:    addr,
 		Handler: s.engine,
 	}
+
 	//add api from @Api tag
 	s.LoadRouter()
-	for _, m := range s.DynamicRouter.Routes {
-		s.Add(m.Method, m.Path, m.Handler)
-	}
+	s.Routes(s.DynamicRouter.Routes)
+
 	//add api from provider route
 	s.Routes(s.ProviderRouter.Routes)
 
@@ -92,25 +65,35 @@ func (s *Server) Use(middleware ...core.Handler) {
 }
 
 func (s *Server) AddGroup(relativePath string, register func(rg core.RouterGroup), middleware ...core.Handler) {
-	group := s.engine.Group(relativePath)
+	group := s.engine.Group(path.Join(s.config.RootPath, relativePath))
 	for _, m := range middleware {
 		group.Use(transfer(m))
 	}
 	register(&RouterGroup{group: group})
 }
 
-func (s *Server) Add(method, path string, handler core.Handler, middleware ...core.Handler) {
+func (s *Server) Add(method, relativePath string, handler core.Handler, middleware ...core.Handler) {
 	handlers := make([]gin.HandlerFunc, 0, len(middleware)+1)
 	for _, m := range middleware {
 		handlers = append(handlers, transfer(m))
 	}
 	handlers = append(handlers, transfer(handler))
-	s.engine.Handle(method, path, handlers...)
+	s.engine.Handle(method, path.Join(s.config.RootPath, relativePath), handlers...)
 }
 
 func (s *Server) Routes(routes []core.RouteConfig) {
 	for _, r := range routes {
 		s.Add(r.Method, r.Path, r.Handler, r.Middleware...)
+	}
+}
+
+func (s *Server) Static(relativePath, root string) {
+	s.engine.Static(relativePath, root)
+}
+
+func (s *Server) RootPath(relativePath string) {
+	if relativePath != "" {
+		s.config.RootPath = relativePath
 	}
 }
 
