@@ -7,6 +7,7 @@ import (
 	"github.com/kimxuanhong/go-server/echo"
 	"github.com/kimxuanhong/go-server/example/echo/internal/api"
 	"github.com/kimxuanhong/go-server/jwt"
+	"github.com/kimxuanhong/go-utils/safe"
 	"log"
 	"net/http"
 )
@@ -58,9 +59,10 @@ func main() {
 	})
 
 	server.Add("GET", "/ping", func(c core.Context) {
-		c.JSON(200, map[string]string{
-			"message": "pong",
-		})
+		user := safe.GetOrDefault(func() *jwt.UserInfo {
+			return c.Get(jwt.UserInfoKey).(*jwt.UserInfo)
+		}, &jwt.UserInfo{})
+		c.JSON(200, user)
 	}, func(c core.Context) {
 		log.Println("Test /ping")
 		c.Next()
