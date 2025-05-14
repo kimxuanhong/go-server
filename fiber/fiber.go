@@ -44,6 +44,11 @@ func (s *Server) Start() error {
 	//add api from provider route
 	s.Routes(s.ProviderRouter.Routes)
 
+	// Debug: Print registered routes
+	for _, route := range s.app.GetRoutes(true) {
+		log.Printf("Route: %s %s -> %s", route.Method, route.Path, route.Name)
+	}
+
 	log.Printf("Server is running at %s", addr)
 	return s.app.Listen(addr)
 }
@@ -85,19 +90,19 @@ func (s *Server) Static(relativePath, root string) {
 }
 
 func (s *Server) HealthCheck() {
-	s.app.Get("/ping", func(c *fiber.Ctx) error {
+	s.app.Add("GET", "/ping", func(c *fiber.Ctx) error {
 		return c.Status(core.StatusOK).JSON(fiber.Map{
 			"message": "pong",
 		})
 	})
 
-	s.app.Get("/liveness", func(c *fiber.Ctx) error {
+	s.app.Add("GET", "/liveness", func(c *fiber.Ctx) error {
 		return c.Status(core.StatusOK).JSON(fiber.Map{
 			"status": "alive",
 		})
 	})
 
-	s.app.Get("/readiness", func(c *fiber.Ctx) error {
+	s.app.Add("GET", "/readiness", func(c *fiber.Ctx) error {
 		// Thêm logic kiểm tra database, cache, v.v. nếu cần
 		return c.Status(core.StatusOK).JSON(fiber.Map{
 			"status": "ready",
