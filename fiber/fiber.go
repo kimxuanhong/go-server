@@ -84,12 +84,6 @@ func (s *Server) Static(relativePath, root string) {
 	s.app.Static(relativePath, root)
 }
 
-func (s *Server) RootPath(relativePath string) {
-	if relativePath != "" {
-		s.config.RootPath = relativePath
-	}
-}
-
 func (s *Server) HealthCheck() {
 	s.app.Get("/ping", func(c *fiber.Ctx) error {
 		return c.Status(core.StatusOK).JSON(fiber.Map{

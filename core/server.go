@@ -32,6 +32,5 @@ type Server interface {
 	RegisterHandlers(handlers ...interface{})
 	Routes(routes []RouteConfig)
 	Static(relativePath, root string)
-	RootPath(relativePath string)
 	HealthCheck()
 }

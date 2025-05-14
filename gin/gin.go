@@ -94,12 +94,6 @@ func (s *Server) Static(relativePath, root string) {
 	s.engine.Static(relativePath, root)
 }
 
-func (s *Server) RootPath(relativePath string) {
-	if relativePath != "" {
-		s.config.RootPath = relativePath
-	}
-}
-
 func (s *Server) HealthCheck() {
 	s.engine.GET("/ping", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
