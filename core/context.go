@@ -14,6 +14,8 @@ type Context interface {
 
 	// JSON Output
 	JSON(code int, obj interface{})
+	Abort()
+	AbortWithStatusJSON(code int, obj interface{})
 	String(code int, msg string) error
 	Status(code int) Context
 	SetHeader(key, value string)
@@ -24,4 +26,9 @@ type Context interface {
 
 	// Raw access if needed
 	Raw() interface{}
+
+	Set(key string, value interface{})
+	Get(key string) interface{}
+	GetString(key string) string
+	GetInt(key string) int
 }

@@ -6,7 +6,6 @@ import (
 	"github.com/kimxuanhong/go-server/core"
 	"log"
 	"net/http"
-	"path"
 	"time"
 )
 
@@ -15,6 +14,7 @@ type Server struct {
 	*core.DynamicRouter
 	*core.ProviderRouter
 	engine     *gin.Engine
+	rootGroup  *gin.RouterGroup
 	config     *core.Config
 	httpServer *http.Server
 }
@@ -22,6 +22,7 @@ type Server struct {
 func NewServer(cfg *core.Config) core.Server {
 	gin.SetMode(cfg.Mode)
 	engine := gin.New()
+	rootGroup := engine.Group(cfg.RootPath)
 	engine.Use(gin.Logger())
 	engine.Use(gin.Recovery())
 
@@ -29,6 +30,7 @@ func NewServer(cfg *core.Config) core.Server {
 		DynamicRouter:  &core.DynamicRouter{},
 		ProviderRouter: &core.ProviderRouter{},
 		engine:         engine,
+		rootGroup:      rootGroup,
 		config:         cfg,
 	}
 }
@@ -61,12 +63,12 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 func (s *Server) Use(middleware ...core.Handler) {
 	for _, m := range middleware {
-		s.engine.Use(transfer(m))
+		s.rootGroup.Use(transfer(m))
 	}
 }
 
 func (s *Server) AddGroup(relativePath string, register func(rg core.RouterGroup), middleware ...core.Handler) {
-	group := s.engine.Group(path.Join(s.config.RootPath, relativePath))
+	group := s.rootGroup.Group(relativePath)
 	for _, m := range middleware {
 		group.Use(transfer(m))
 	}
@@ -79,7 +81,7 @@ func (s *Server) Add(method, relativePath string, handler core.Handler, middlewa
 		handlers = append(handlers, transfer(m))
 	}
 	handlers = append(handlers, transfer(handler))
-	s.engine.Handle(method, path.Join(s.config.RootPath, relativePath), handlers...)
+	s.rootGroup.Handle(method, relativePath, handlers...)
 }
 
 func (s *Server) Routes(routes []core.RouteConfig) {
@@ -99,6 +101,12 @@ func (s *Server) RootPath(relativePath string) {
 }
 
 func (s *Server) HealthCheck() {
+	s.engine.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "pong",
+		})
+	})
+
 	s.engine.GET("/liveness", func(c *gin.Context) {
 		c.JSON(core.StatusOK, gin.H{"status": "alive"})
 	})

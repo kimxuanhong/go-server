@@ -5,7 +5,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/kimxuanhong/go-server/core"
 	"log"
-	"path"
 	"time"
 )
 
@@ -13,12 +12,14 @@ import (
 type Server struct {
 	*core.DynamicRouter
 	*core.ProviderRouter
-	app    *fiber.App
-	config *core.Config
+	app       *fiber.App
+	rootGroup fiber.Router
+	config    *core.Config
 }
 
 func NewServer(cfg *core.Config) core.Server {
 	app := fiber.New()
+	rootGroup := app.Group(cfg.RootPath)
 	app.Use(func(c *fiber.Ctx) error {
 		log.Printf("Request: %s %s", c.Method(), c.Path())
 		return c.Next()
@@ -28,6 +29,7 @@ func NewServer(cfg *core.Config) core.Server {
 		DynamicRouter:  &core.DynamicRouter{},
 		ProviderRouter: &core.ProviderRouter{},
 		app:            app,
+		rootGroup:      rootGroup,
 		config:         cfg,
 	}
 }
@@ -53,12 +55,12 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 func (s *Server) Use(middleware ...core.Handler) {
 	for _, m := range middleware {
-		s.app.Use(transfer(m))
+		s.rootGroup.Use(transfer(m))
 	}
 }
 
 func (s *Server) AddGroup(relativePath string, register func(rg core.RouterGroup), middleware ...core.Handler) {
-	group := s.app.Group(path.Join(s.config.RootPath, relativePath))
+	group := s.rootGroup.Group(relativePath)
 	for _, m := range middleware {
 		group.Use(transfer(m))
 	}
@@ -67,9 +69,9 @@ func (s *Server) AddGroup(relativePath string, register func(rg core.RouterGroup
 
 func (s *Server) Add(method, relativePath string, handler core.Handler, middleware ...core.Handler) {
 	for _, m := range middleware {
-		s.app.Use(path.Join(s.config.RootPath, relativePath), transfer(m))
+		s.rootGroup.Use(relativePath, transfer(m))
 	}
-	s.app.Add(method, path.Join(s.config.RootPath, relativePath), transfer(handler))
+	s.app.Add(method, relativePath, transfer(handler))
 }
 
 func (s *Server) Routes(routes []core.RouteConfig) {
@@ -89,6 +91,12 @@ func (s *Server) RootPath(relativePath string) {
 }
 
 func (s *Server) HealthCheck() {
+	s.app.Get("/ping", func(c *fiber.Ctx) error {
+		return c.Status(core.StatusOK).JSON(fiber.Map{
+			"message": "pong",
+		})
+	})
+
 	s.app.Get("/liveness", func(c *fiber.Ctx) error {
 		return c.Status(core.StatusOK).JSON(fiber.Map{
 			"status": "alive",

@@ -34,6 +34,14 @@ func (g *ginContext) JSON(code int, obj interface{}) {
 	g.ctx.JSON(code, obj)
 }
 
+func (g *ginContext) Abort() {
+	g.ctx.Abort()
+}
+
+func (g *ginContext) AbortWithStatusJSON(code int, obj interface{}) {
+	g.ctx.AbortWithStatusJSON(code, obj)
+}
+
 func (g *ginContext) String(code int, msg string) error {
 	g.ctx.String(code, msg)
 	return nil
@@ -65,4 +73,21 @@ func (g *ginContext) Next() {
 
 func (g *ginContext) Raw() interface{} {
 	return g.ctx
+}
+
+func (g *ginContext) Set(key string, value interface{}) {
+	g.ctx.Set(key, value)
+}
+
+func (g *ginContext) Get(key string) interface{} {
+	val, _ := g.ctx.Get(key)
+	return val
+}
+
+func (g *ginContext) GetString(key string) string {
+	return g.ctx.GetString(key)
+}
+
+func (g *ginContext) GetInt(key string) int {
+	return g.ctx.GetInt(key)
 }

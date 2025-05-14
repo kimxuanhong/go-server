@@ -38,6 +38,14 @@ func (f *fiberContext) JSON(code int, obj interface{}) {
 	}
 }
 
+func (f *fiberContext) Abort() {
+	// Fiber không có Abort, nên ta dừng luồng bằng cách không gọi next()
+}
+
+func (f *fiberContext) AbortWithStatusJSON(code int, obj interface{}) {
+	f.JSON(code, obj)
+}
+
 func (f *fiberContext) String(code int, msg string) error {
 	return f.ctx.Status(code).SendString(msg)
 }
@@ -70,4 +78,34 @@ func (f *fiberContext) Next() {
 
 func (f *fiberContext) Raw() interface{} {
 	return f.ctx
+}
+
+func (f *fiberContext) Set(key string, value interface{}) {
+	f.ctx.Locals(key, value)
+}
+
+func (f *fiberContext) Get(key string) interface{} {
+	return f.ctx.Locals(key)
+}
+
+func (f *fiberContext) GetString(key string) string {
+	val := f.ctx.Locals(key)
+	if s, ok := val.(string); ok {
+		return s
+	}
+	return ""
+}
+
+func (f *fiberContext) GetInt(key string) int {
+	val := f.ctx.Locals(key)
+	switch v := val.(type) {
+	case int:
+		return v
+	case int64:
+		return int(v)
+	case float64:
+		return int(v)
+	default:
+		return 0
+	}
 }
