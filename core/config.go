@@ -7,11 +7,11 @@ import (
 
 // Config defines server configuration.
 type Config struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	Mode     string `yaml:"mode"`
-	RootPath string `yaml:"root-path"`
-	Engine   string `yaml:"engine"` //gin, fiber, echo
+	Host     string `mapstructure:"host" yaml:"host"`
+	Port     string `mapstructure:"port" yaml:"port"`
+	Mode     string `mapstructure:"mode" yaml:"mode"`
+	RootPath string `mapstructure:"root-path" yaml:"root-path"`
+	Engine   string `mapstructure:"engine" yaml:"engine"` //gin, fiber, echo
 }
 
 func (c *Config) GetAddr() string {
