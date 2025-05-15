@@ -23,7 +23,8 @@ type Jwt struct {
 	expIn     int
 }
 
-func NewJwt(cfg *Config) *Jwt {
+func NewJwt(configs ...*Config) *Jwt {
+	cfg := GetConfig(configs...)
 	return &Jwt{
 		secretKey: cfg.SecretKey,
 		expIn:     cfg.ExpIn,

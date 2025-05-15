@@ -1,13 +1,14 @@
 package jwt
 
 import (
+	"github.com/spf13/viper"
 	"os"
 	"strconv"
 )
 
 type Config struct {
-	SecretKey string `yaml:"secretKey"`
-	ExpIn     int    `yaml:"expIn"`
+	SecretKey string `mapstructure:"secretKey" yaml:"secretKey"`
+	ExpIn     int    `mapstructure:"expIn" yaml:"expIn"`
 }
 
 func DefaultConfig() *Config {
@@ -35,4 +36,16 @@ func getEnvAsInt(key string, defaultValue int) int {
 		return defaultValue
 	}
 	return parsedValue
+}
+
+func GetConfig(configs ...*Config) *Config {
+	if len(configs) > 0 && configs[0] != nil {
+		return configs[0]
+	}
+	viper.SetDefault("jwt.secretKey", "Matkhau@1234Nam")
+	viper.SetDefault("jwt.expIn", 3600)
+	return &Config{
+		SecretKey: viper.GetString("jwt.secretKey"),
+		ExpIn:     viper.GetInt("jwt.expIn"),
+	}
 }
