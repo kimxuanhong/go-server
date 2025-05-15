@@ -17,7 +17,8 @@ type Server struct {
 	config    *core.Config
 }
 
-func NewServer(cfg *core.Config) core.Server {
+func NewServer(configs ...*core.Config) core.Server {
+	cfg := core.GetConfig(configs...)
 	app := fiber.New()
 	rootGroup := app.Group(cfg.RootPath)
 	app.Use(func(c *fiber.Ctx) error {

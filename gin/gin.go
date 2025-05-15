@@ -19,7 +19,8 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func NewServer(cfg *core.Config) core.Server {
+func NewServer(configs ...*core.Config) core.Server {
+	cfg := core.GetConfig(configs...)
 	gin.SetMode(cfg.Mode)
 	engine := gin.New()
 	rootGroup := engine.Group(cfg.RootPath)

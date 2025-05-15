@@ -20,7 +20,8 @@ type Server struct {
 	httpServer *http.Server
 }
 
-func NewServer(cfg *core.Config) core.Server {
+func NewServer(configs ...*core.Config) core.Server {
+	cfg := core.GetConfig(configs...)
 	engine := echo.New()
 	engine.HideBanner = true
 	engine.Debug = cfg.Mode == "debug"
