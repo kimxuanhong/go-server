@@ -39,7 +39,7 @@ func main() {
 	server.Use(func(c core.Context) {
 		log.Printf("Middleware: %s %s", c.Method(), c.Path())
 		c.Next()
-	}, jwt.AuthMiddleware(jwtComp))
+	})
 
 	// Đăng ký các routes
 	server.AddGroup("/index", func(rg core.RouterGroup) {
@@ -83,7 +83,7 @@ func main() {
 	}
 	server.Routes(funcHandler)
 
-	server.SetHandlers(&api.MyApiHandler{})
+	server.RegisterHandlersWithTags(&api.MyApiHandler{})
 	server.HealthCheck()
 
 	// Bắt đầu chạy server

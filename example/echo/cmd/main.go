@@ -85,7 +85,7 @@ func main() {
 	}
 	server.Routes(funcHandler)
 
-	server.SetHandlers(&api.MyApiHandler{})
+	server.RegisterHandlersWithTags(&api.MyApiHandler{})
 	server.HealthCheck()
 
 	// Bắt đầu chạy server

@@ -1,18 +1,21 @@
 package core
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"log"
-	"os"
-	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 )
 
+var (
+	ctxType = reflect.TypeOf((*Context)(nil)).Elem()
+)
+
 type DynamicRouter struct {
-	dirs        []string
 	apiHandlers []interface{}
 	Routes      []RouteConfig
 }
@@ -25,12 +28,8 @@ func (b *DynamicRouter) add(method, path string, handler Handler) {
 	})
 }
 
-func (b *DynamicRouter) SetHandlers(handlers ...interface{}) {
+func (b *DynamicRouter) RegisterHandlersWithTags(handlers ...interface{}) {
 	b.apiHandlers = append(b.apiHandlers, handlers...)
-}
-
-func (b *DynamicRouter) RoutersPath(dirs ...string) {
-	b.dirs = append(b.dirs, dirs...)
 }
 
 // LoadRouter quét tất cả các thư mục và tìm kiếm các route từ các tệp Go
@@ -39,110 +38,86 @@ func (b *DynamicRouter) LoadRouter() {
 		return
 	}
 
-	ctxType := reflect.TypeOf((*Context)(nil)).Elem()
+	for _, apiHandler := range b.apiHandlers {
+		val := reflect.ValueOf(apiHandler)
 
-	// Nếu không có đường dẫn nào được truyền vào, quét thư mục hiện tại của main
-	if len(b.dirs) == 0 {
-		dir, err := os.Getwd() // Lấy thư mục hiện tại của main
+		filePath, err := getFilePathOfStruct(apiHandler)
 		if err != nil {
-			log.Fatalf("failed to get current working directory: %v", err)
-		}
-		b.dirs = append(b.dirs, dir) // Quét từ thư mục hiện tại
-	}
-
-	// Hàm quét đệ quy
-	var scanDirs func(string) error
-	scanDirs = func(dir string) error {
-		// Quét tất cả các tệp Go trong thư mục hiện tại
-		files, err := filepath.Glob(filepath.Join(dir, "*.go"))
-		if err != nil {
-			log.Printf("failed to scan folder %s: %v", dir, err)
-			return err
+			log.Printf("failed to get file path of struct %T: %v", apiHandler, err)
+			continue
 		}
 
-		for _, file := range files {
-			routes := ParseRoutesFromFile(file)
-
-			for _, route := range routes {
-				found := false
-
-				for _, handler := range b.apiHandlers {
-					val := reflect.ValueOf(handler)
-					method := val.MethodByName(route.Handler)
-					if !method.IsValid() {
-						log.Printf("method %s not found in handler %T", route.Handler, handler)
-						continue
-					}
-
-					// Kiểm tra kiểu tham số đầu vào và kiểu trả về
-					methodType := method.Type()
-					if methodType.NumIn() != 1 || methodType.In(0) != ctxType || methodType.NumOut() != 0 {
-						log.Printf("method %s in %T must be func(Context)", route.Handler, handler)
-						continue
-					}
-
-					// Tạo handler thực thi
-					h := Handler(func(ctx Context) {
-						results := method.Call([]reflect.Value{reflect.ValueOf(ctx)})
-
-						if len(results) > 0 && !results[0].IsNil() {
-							if err, ok := results[0].Interface().(error); ok {
-								log.Printf("handler %s returned error: %v", route.Handler, err)
-							}
-						}
-					})
-
-					b.add(route.Method, route.Path, h)
-					found = true
-					break
-				}
-
-				if !found {
-					log.Printf("handler method %s not found for path %s", route.Handler, route.Path)
-				}
+		methodApiMap := parseApiTags(filePath)
+		for methodName, route := range methodApiMap {
+			method := val.MethodByName(methodName)
+			if !method.IsValid() {
+				log.Printf("method %s not found in handler %T", methodName, apiHandler)
+				continue
 			}
-		}
 
-		// Duyệt đệ quy vào các thư mục con
-		subDirs, err := os.ReadDir(dir)
-		if err != nil {
-			log.Printf("failed to read directory %s: %v", dir, err)
-			return err
-		}
-		for _, entry := range subDirs {
-			if entry.IsDir() {
-				err := scanDirs(filepath.Join(dir, entry.Name()))
-				if err != nil {
-					return err
-				}
+			// Ex: (h *MyApiHandler) SayHello(c core.Context) {}
+			// Kiểm tra kiểu signature method
+			methodType := method.Type()
+			// method là bound method, nên đầu vào phải có 1 tham số (ctx)
+			if methodType.NumIn() != 1 {
+				log.Printf("method %s in %T must have exactly one input parameter (Context)", methodName, apiHandler)
+				continue
 			}
-		}
-		return nil
-	}
+			// Kiểm tra kiểu Context
+			if methodType.In(0) != ctxType {
+				log.Printf("method %s in %T input parameter must be Context", methodName, apiHandler)
+				continue
+			}
 
-	// Quét tất cả các thư mục đã chỉ định (hoặc thư mục gốc nếu không có thư mục nào được truyền vào)
-	for _, dir := range b.dirs {
-		err := scanDirs(dir)
-		if err != nil {
-			log.Printf("error scanning directory %s: %v", dir, err)
+			// Đảm bảo function không có giá trị trả về
+			if methodType.NumOut() != 0 {
+				log.Printf("method %s in %T must have no return value", methodName, apiHandler)
+				continue
+			}
+
+			h := Handler(func(ctx Context) {
+				method.Call([]reflect.Value{reflect.ValueOf(ctx)})
+			})
+
+			b.add(route.Method, route.Path, h)
 		}
 	}
 }
 
 type ParseRoute struct {
-	Path    string
-	Method  string
-	Handler string
+	Path   string
+	Method string
 }
 
-func ParseRoutesFromFile(filename string) []ParseRoute {
+func parseApiTags(filename string) map[string]ParseRoute {
 	set := token.NewFileSet()
 	node, err := parser.ParseFile(set, filename, nil, parser.ParseComments)
 	if err != nil {
 		log.Fatalf("failed to parse file: %v", err)
 	}
 
-	var routes []ParseRoute
+	result := make(map[string]ParseRoute)
+	baseUrl := ""
+
+	// Tìm @BaseUrl
+	for _, decl := range node.Decls {
+		genDecl, ok := decl.(*ast.GenDecl)
+		if !ok || genDecl.Tok != token.TYPE {
+			continue
+		}
+		if genDecl.Doc != nil {
+			for _, comment := range genDecl.Doc.List {
+				if strings.HasPrefix(comment.Text, "// @BaseUrl") {
+					parts := strings.Fields(comment.Text)
+					if len(parts) >= 2 {
+						baseUrl = parts[2]
+					}
+				}
+			}
+		}
+	}
+
+	// Tìm @Api
 	for _, decl := range node.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok || fn.Doc == nil {
@@ -150,23 +125,38 @@ func ParseRoutesFromFile(filename string) []ParseRoute {
 		}
 		for _, comment := range fn.Doc.List {
 			if strings.HasPrefix(comment.Text, "// @Api") {
-				// Tách comment thành các phần tử
 				parts := strings.Fields(comment.Text)
 				if len(parts) != 4 {
 					log.Printf("Invalid @Api comment format: %s", comment.Text)
 					continue
 				}
-				// Phần tử đầu tiên là @Api, phần tử thứ 2 là method, phần tử thứ 3 là path
 				method := parts[2]
 				path := parts[3]
-
-				routes = append(routes, ParseRoute{
-					Method:  method,
-					Path:    path,
-					Handler: fn.Name.Name,
-				})
+				fullPath := path
+				if baseUrl != "" {
+					fullPath = strings.TrimRight(baseUrl, "/") + "/" + strings.TrimLeft(path, "/")
+				}
+				result[fn.Name.Name] = ParseRoute{
+					Method: method,
+					Path:   fullPath,
+				}
 			}
 		}
 	}
-	return routes
+
+	return result
+}
+
+func getFilePathOfStruct(i interface{}) (string, error) {
+	typ := reflect.TypeOf(i)
+	if typ.NumMethod() == 0 {
+		return "", fmt.Errorf("struct %T has no methods", i)
+	}
+	pc := typ.Method(0).Func.Pointer()
+	fn := runtime.FuncForPC(pc)
+	if fn == nil {
+		return "", fmt.Errorf("cannot find function for struct")
+	}
+	file, _ := fn.FileLine(pc)
+	return file, nil
 }

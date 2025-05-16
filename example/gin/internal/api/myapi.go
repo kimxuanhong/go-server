@@ -4,6 +4,8 @@ import (
 	"github.com/kimxuanhong/go-server/core"
 )
 
+// MyApiHandler
+// @BaseUrl /iloveu/
 type MyApiHandler struct {
 }
 
