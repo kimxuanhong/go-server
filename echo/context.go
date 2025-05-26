@@ -75,14 +75,19 @@ func (e *echoContext) Raw() interface{} {
 
 func (e *echoContext) Set(key string, value interface{}) {
 	e.ctx.Set(key, value)
+	ctx := context.WithValue(e.ctx.Request().Context(), key, value)
+	e.ctx.SetRequest(e.ctx.Request().WithContext(ctx))
 }
 
 func (e *echoContext) Get(key string) interface{} {
-	return e.ctx.Get(key)
+	if val := e.ctx.Get(key); val != nil {
+		return val
+	}
+	return e.ctx.Request().Context().Value(key)
 }
 
 func (e *echoContext) GetString(key string) string {
-	val := e.ctx.Get(key)
+	val := e.Get(key)
 	if str, ok := val.(string); ok {
 		return str
 	}
@@ -90,7 +95,7 @@ func (e *echoContext) GetString(key string) string {
 }
 
 func (e *echoContext) GetInt(key string) int {
-	val := e.ctx.Get(key)
+	val := e.Get(key)
 	if i, ok := val.(int); ok {
 		return i
 	}

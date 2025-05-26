@@ -77,11 +77,15 @@ func (g *ginContext) Raw() interface{} {
 
 func (g *ginContext) Set(key string, value interface{}) {
 	g.ctx.Set(key, value)
+	ctx := context.WithValue(g.ctx.Request.Context(), key, value)
+	g.ctx.Request = g.ctx.Request.WithContext(ctx)
 }
 
 func (g *ginContext) Get(key string) interface{} {
-	val, _ := g.ctx.Get(key)
-	return val
+	if v, exists := g.ctx.Get(key); exists {
+		return v
+	}
+	return g.ctx.Request.Context().Value(key)
 }
 
 func (g *ginContext) GetString(key string) string {

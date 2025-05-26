@@ -82,14 +82,19 @@ func (f *fiberContext) Raw() interface{} {
 
 func (f *fiberContext) Set(key string, value interface{}) {
 	f.ctx.Locals(key, value)
+	ctx := context.WithValue(f.ctx.Context(), key, value)
+	f.ctx.SetUserContext(ctx)
 }
 
 func (f *fiberContext) Get(key string) interface{} {
-	return f.ctx.Locals(key)
+	if val := f.ctx.Locals(key); val != nil {
+		return val
+	}
+	return f.ctx.Context().Value(key)
 }
 
 func (f *fiberContext) GetString(key string) string {
-	val := f.ctx.Locals(key)
+	val := f.Get(key)
 	if s, ok := val.(string); ok {
 		return s
 	}
@@ -97,7 +102,7 @@ func (f *fiberContext) GetString(key string) string {
 }
 
 func (f *fiberContext) GetInt(key string) int {
-	val := f.ctx.Locals(key)
+	val := f.Get(key)
 	switch v := val.(type) {
 	case int:
 		return v
